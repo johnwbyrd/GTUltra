@@ -18,6 +18,7 @@
 #define PLAYER3_TYPES_H
 
 #include <stdint.h>
+#include <stddef.h>  // for NULL
 #include <stdbool.h>
 #include "sid.h"
 

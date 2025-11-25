@@ -166,21 +166,21 @@ void test_pattern_decoding(void) {
     // First call - should see REST and set packed_rest_count
     sequencer_fetch_note(&ch, &test_music_data);
     TEST_ASSERT(ch.note == NOTE_REST, "Packed rest: first REST");
-    TEST_ASSERT(ch.packed_rest_count > 0, "Packed rest count set");
+    TEST_ASSERT(ch.packed_rest > 0, "Packed rest count set");
     TEST_ASSERT(ch.pattern_ptr == 11, "Pattern pointer stays at 11");
 
-    uint8_t expected_count = ch.packed_rest_count;
+    uint8_t expected_count = ch.packed_rest;
 
     // Subsequent calls - should continue returning REST
     sequencer_fetch_note(&ch, &test_music_data);
     TEST_ASSERT(ch.note == NOTE_REST, "Packed rest: second REST");
-    TEST_ASSERT(ch.packed_rest_count == expected_count - 1, "Count decremented");
+    TEST_ASSERT(ch.packed_rest == expected_count - 1, "Count decremented");
 
     // Exhaust packed rests
-    while (ch.packed_rest_count > 0) {
+    while (ch.packed_rest > 0) {
         sequencer_fetch_note(&ch, &test_music_data);
     }
-    TEST_ASSERT(ch.packed_rest_count == 0, "Packed rest count exhausted");
+    TEST_ASSERT(ch.packed_rest == 0, "Packed rest count exhausted");
     TEST_ASSERT(ch.pattern_ptr == 12, "Pattern pointer advanced after packed rests");
 
     //-------------------------------------------------------------------------
