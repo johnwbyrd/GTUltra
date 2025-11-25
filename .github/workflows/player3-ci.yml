@@ -1,0 +1,152 @@
+name: Player3 C Implementation CI
+
+on:
+  push:
+    branches: [ main, master, 'claude/**' ]
+    paths:
+      - 'src/player3/**'
+      - '.github/workflows/player3-ci.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'src/player3/**'
+      - '.github/workflows/player3-ci.yml'
+
+jobs:
+  build-and-test:
+    name: Build and Test Player3
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache LLVM-MOS SDK
+        id: cache-llvm-mos
+        uses: actions/cache@v4
+        with:
+          path: /opt/llvm-mos
+          key: llvm-mos-${{ runner.os }}-v22.3.2
+          restore-keys: |
+            llvm-mos-${{ runner.os }}-
+
+      - name: Download and install LLVM-MOS SDK
+        if: steps.cache-llvm-mos.outputs.cache-hit != 'true'
+        run: |
+          echo "Downloading LLVM-MOS SDK v22.3.2..."
+          curl -L -o /tmp/llvm-mos-linux.tar.xz \
+            https://github.com/llvm-mos/llvm-mos-sdk/releases/download/v22.3.2/llvm-mos-linux.tar.xz
+
+          echo "Extracting LLVM-MOS SDK..."
+          sudo mkdir -p /opt/llvm-mos
+          sudo tar -xf /tmp/llvm-mos-linux.tar.xz -C /opt/llvm-mos --strip-components=1
+
+          echo "LLVM-MOS SDK installed to /opt/llvm-mos"
+          ls -la /opt/llvm-mos/bin/
+
+      - name: Add LLVM-MOS to PATH
+        run: |
+          echo "/opt/llvm-mos/bin" >> $GITHUB_PATH
+
+      - name: Verify LLVM-MOS installation
+        run: |
+          which mos-c64-clang || (echo "ERROR: mos-c64-clang not found in PATH" && exit 1)
+          mos-c64-clang --version
+
+      - name: Build Player3 library
+        working-directory: src/player3
+        run: |
+          echo "Building Player3 library..."
+          make all
+          echo "✓ Library built successfully"
+
+      - name: Build tests
+        working-directory: src/player3
+        run: |
+          echo "Building tests..."
+          make build-tests
+          echo "✓ Tests compiled successfully"
+
+      - name: Run syntax and compilation check
+        working-directory: src/player3
+        run: |
+          echo "Running comprehensive compilation check..."
+          make clean
+          make check
+          echo "✓ All checks passed!"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: player3-build
+          path: |
+            src/player3/build/libplayer3.a
+            src/player3/build/*.o
+            src/player3/build/test_*
+          retention-days: 7
+
+      - name: Build summary
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✓ Player3 C implementation built successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- Library: \`libplayer3.a\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Object files: $(ls src/player3/build/*.o | wc -l) files" >> $GITHUB_STEP_SUMMARY
+          echo "- Test binaries: $(ls src/player3/build/test_* 2>/dev/null | wc -l) files" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Compiler" >> $GITHUB_STEP_SUMMARY
+          echo "- LLVM-MOS SDK v22.3.2" >> $GITHUB_STEP_SUMMARY
+          echo "- Target: Commodore 64 (mos-c64)" >> $GITHUB_STEP_SUMMARY
+
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check for common issues
+        working-directory: src/player3
+        run: |
+          echo "Checking for common code issues..."
+
+          # Check for tabs vs spaces consistency
+          if grep -r $'\t' src/*.c include/*.h 2>/dev/null; then
+            echo "WARNING: Found tabs in source files. Consider using spaces for consistency."
+          else
+            echo "✓ No tabs found (good!)"
+          fi
+
+          # Check for trailing whitespace
+          if grep -r ' $' src/*.c include/*.h 2>/dev/null; then
+            echo "WARNING: Found trailing whitespace"
+          else
+            echo "✓ No trailing whitespace"
+          fi
+
+          # Check file permissions
+          if find src include -type f -executable 2>/dev/null | grep -q .; then
+            echo "WARNING: Found executable source files (should not be executable)"
+          else
+            echo "✓ File permissions look good"
+          fi
+
+          echo "Code quality checks complete!"
+
+      - name: Generate statistics
+        working-directory: src/player3
+        run: |
+          echo "## Code Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Lines of Code" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          wc -l src/*.c include/*.h | tail -1 >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### File Count" >> $GITHUB_STEP_SUMMARY
+          echo "- Source files: $(ls src/*.c | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "- Header files: $(ls include/*.h | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "- Test files: $(ls test/*.c 2>/dev/null | wc -l)" >> $GITHUB_STEP_SUMMARY

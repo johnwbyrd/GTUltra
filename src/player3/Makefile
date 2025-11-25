@@ -89,7 +89,7 @@ EXAMPLES = \
 # Build Rules
 #------------------------------------------------------------------------------
 
-.PHONY: all clean debug test help examples
+.PHONY: all clean debug test build-tests check help examples
 
 # Default target: build release library
 all: $(LIB)
@@ -98,15 +98,30 @@ all: $(LIB)
 debug: CFLAGS += $(DEBUGFLAGS)
 debug: clean $(LIB)
 
-# Build and run tests
-test: CFLAGS += $(DEBUGFLAGS)
-test: $(TEST_BINS)
-	@echo "Running tests..."
+# Build tests (compile only - tests are C64 binaries)
+build-tests: CFLAGS += $(DEBUGFLAGS)
+build-tests: $(TEST_BINS)
+	@echo "Tests built successfully!"
+	@echo "Note: Tests are C64 binaries. Use 'make test' with x64sc emulator to run them."
+
+# Run tests (requires VICE emulator)
+test: build-tests
+	@echo "Running tests with x64sc emulator..."
+	@if ! command -v x64sc >/dev/null 2>&1; then \
+		echo "Error: x64sc emulator not found. Install VICE to run tests."; \
+		echo "Tests were compiled successfully but cannot run without emulator."; \
+		exit 1; \
+	fi
 	@for test in $(TEST_BINS); do \
 		echo "  Running $$test..."; \
-		$$test || exit 1; \
+		x64sc -console $$test || exit 1; \
 	done
 	@echo "All tests passed!"
+
+# Check syntax and compilation (CI-friendly)
+check: CFLAGS += $(DEBUGFLAGS)
+check: $(LIB) build-tests
+	@echo "✓ All source files compiled successfully!"
 
 # Build example programs
 examples: $(EXAMPLES)
@@ -144,16 +159,19 @@ help:
 	@echo "Player3 C Implementation - Makefile Help"
 	@echo ""
 	@echo "Targets:"
-	@echo "  make         - Build release library (libplayer3.a)"
-	@echo "  make debug   - Build debug library with assertions"
-	@echo "  make test    - Build and run all tests"
-	@echo "  make examples- Build example programs"
-	@echo "  make clean   - Remove all build artifacts"
-	@echo "  make help    - Show this message"
+	@echo "  make            - Build release library (libplayer3.a)"
+	@echo "  make debug      - Build debug library with assertions"
+	@echo "  make check      - Compile everything (CI-friendly)"
+	@echo "  make build-tests- Build test executables (compile only)"
+	@echo "  make test       - Build and run tests (requires VICE emulator)"
+	@echo "  make examples   - Build example programs"
+	@echo "  make clean      - Remove all build artifacts"
+	@echo "  make help       - Show this message"
 	@echo ""
 	@echo "Requirements:"
 	@echo "  - llvm-mos-sdk installed (https://llvm-mos.org)"
 	@echo "  - mos-c64-clang in PATH"
+	@echo "  - x64sc emulator (optional, for running tests)"
 	@echo ""
 	@echo "Output:"
 	@echo "  Library: $(LIB)"
