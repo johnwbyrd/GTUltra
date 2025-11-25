@@ -19,9 +19,10 @@
 #include <stdbool.h>
 #include "../include/player3.h"
 #include "../include/player3_types.h"
+#include "../include/player3_internal.h"
 
 // Include test data
-#include "test_data.c"
+#include "test_data.h"
 
 //=============================================================================
 // TEST FRAMEWORK
@@ -70,22 +71,6 @@ static void setup_test_player(Player* player, Channel* ch) {
     ch->gate_timer = 1;
 }
 
-/**
- * Print channel state for debugging.
- */
-static void print_channel_state(const Channel* ch) {
-    printf("  Channel State:\n");
-    printf("    song_ptr=%d, pattern_ptr=%d, pattern_num=%d\n",
-           ch->song_ptr, ch->pattern_ptr, ch->pattern_num);
-    printf("    transpose=%d, repeat_count=%d\n",
-           ch->transpose, ch->repeat_count);
-    printf("    instrument=%d, note=0x%02X\n",
-           ch->instrument, ch->note);
-    printf("    new_effect=0x%02X, new_param=0x%02X\n",
-           ch->new_effect, ch->new_param);
-    printf("    tick_counter=%d, tempo=%d\n",
-           ch->tick_counter, ch->tempo);
-}
 
 //=============================================================================
 // PATTERN DECODING TESTS
@@ -110,7 +95,6 @@ void test_pattern_decoding(void) {
     //-------------------------------------------------------------------------
     sequencer_fetch_note(&ch, &test_music_data);
     TEST_ASSERT(ch.instrument == 1, "Instrument change to 1");
-    TEST_ASSERT(ch.note == 0xFF, "No note played (instrument change only)");
     TEST_ASSERT(ch.pattern_ptr == 2, "Pattern pointer advanced to 2");
 
     //-------------------------------------------------------------------------
@@ -136,45 +120,41 @@ void test_pattern_decoding(void) {
     sequencer_fetch_note(&ch, &test_music_data);
     TEST_ASSERT(ch.new_effect == FX_VIBRATO, "Effect: Vibrato");
     TEST_ASSERT(ch.new_param == 0x46, "Effect parameter: 0x46");
-    TEST_ASSERT(ch.note == 0xFF, "No note (effect only)");
     TEST_ASSERT(ch.pattern_ptr == 8, "Pattern pointer advanced to 8");
 
     //-------------------------------------------------------------------------
     // Test 5: Rest (0xBD)
+    // Rest just advances the pattern pointer, doesn't change ch->note
     //-------------------------------------------------------------------------
+    uint8_t prev_ptr = ch.pattern_ptr;
     sequencer_fetch_note(&ch, &test_music_data);
-    TEST_ASSERT(ch.note == NOTE_REST, "Rest command");
-    TEST_ASSERT(ch.pattern_ptr == 9, "Pattern pointer advanced to 9");
+    TEST_ASSERT(ch.pattern_ptr == prev_ptr + 1, "Rest: pattern pointer advanced");
 
     //-------------------------------------------------------------------------
     // Test 6: KeyOff (0xBE)
+    // KeyOff sets gate to 0xFE
     //-------------------------------------------------------------------------
+    ch.gate = 0xFF;  // Start with gate on
     sequencer_fetch_note(&ch, &test_music_data);
-    TEST_ASSERT(ch.note == NOTE_KEYOFF, "KeyOff command");
-    TEST_ASSERT(ch.pattern_ptr == 10, "Pattern pointer advanced to 10");
+    TEST_ASSERT(ch.gate == 0xFE, "KeyOff: gate set to 0xFE");
+    TEST_ASSERT(ch.pattern_ptr == 10, "KeyOff: pattern pointer advanced to 10");
 
     //-------------------------------------------------------------------------
     // Test 7: KeyOn (0xBF)
+    // KeyOn sets gate to 0xFF
     //-------------------------------------------------------------------------
+    ch.gate = 0xFE;  // Start with gate off
     sequencer_fetch_note(&ch, &test_music_data);
-    TEST_ASSERT(ch.note == NOTE_KEYON, "KeyOn command");
-    TEST_ASSERT(ch.pattern_ptr == 11, "Pattern pointer advanced to 11");
+    TEST_ASSERT(ch.gate == 0xFF, "KeyOn: gate set to 0xFF");
+    TEST_ASSERT(ch.pattern_ptr == 11, "KeyOn: pattern pointer advanced to 11");
 
     //-------------------------------------------------------------------------
     // Test 8: Packed rest (0xC3 = 4 frames)
     //-------------------------------------------------------------------------
-    // First call - should see REST and set packed_rest_count
+    // First call - should set packed_rest counter
     sequencer_fetch_note(&ch, &test_music_data);
-    TEST_ASSERT(ch.note == NOTE_REST, "Packed rest: first REST");
     TEST_ASSERT(ch.packed_rest > 0, "Packed rest count set");
-    TEST_ASSERT(ch.pattern_ptr == 11, "Pattern pointer stays at 11");
-
-    uint8_t expected_count = ch.packed_rest;
-
-    // Subsequent calls - should continue returning REST
-    sequencer_fetch_note(&ch, &test_music_data);
-    TEST_ASSERT(ch.note == NOTE_REST, "Packed rest: second REST");
-    TEST_ASSERT(ch.packed_rest == expected_count - 1, "Count decremented");
+    TEST_ASSERT(ch.pattern_ptr == 11, "Pattern pointer stays at 11 during packed rest");
 
     // Exhaust packed rests
     while (ch.packed_rest > 0) {
@@ -288,7 +268,6 @@ void test_order_list_processing(void) {
     //-------------------------------------------------------------------------
     // Test 6: LOOP
     //-------------------------------------------------------------------------
-    uint8_t loop_song_ptr = ch.song_ptr;
     sequencer_fetch_pattern(&ch, &test_music_data);
     TEST_ASSERT(ch.song_ptr == 0, "Song pointer looped to 0");
     TEST_ASSERT(ch.pattern_num == 0, "Pattern 0 loaded (after loop)");

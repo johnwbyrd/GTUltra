@@ -33,94 +33,187 @@ const uint8_t test_freq_table_hi[128] = {
 };
 
 //=============================================================================
-// INSTRUMENT TABLE
+// INSTRUMENT TABLES (Structure of Arrays format)
 //=============================================================================
+// Each instrument parameter is in its own array. Index 0 is unused (1-based).
 
-// Simple test instruments
-// Format: AD, SR, Wavetable, Pulsetable, Filtertable, Vibrato, GateTimer
-const uint8_t test_instrument_table[] = {
-    // Instrument 0: Empty/default
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+// Gate timer: when to release the note
+const uint8_t test_instr_gatetimer[] = {
+    0x00,  // [0] Unused
+    0x01,  // [1] Gate timer 1
+    0x02,  // [2] Gate timer 2
+    [3 ... 63] = 0x00
+};
 
-    // Instrument 1: Basic pulse
-    0x09, 0xF0,  // AD, SR (fast attack, high sustain)
-    0x01,        // Wavetable 1
-    0x01,        // Pulsetable 1
-    0x00,        // No filter table
-    0x00,        // No vibrato
-    0x01,        // Gate timer 1
+// First waveform on note trigger
+const uint8_t test_instr_firstwave[] = {
+    0x00,  // [0] Unused
+    0x41,  // [1] Pulse + gate
+    0x21,  // [2] Sawtooth + gate
+    [3 ... 63] = 0x00
+};
 
-    // Instrument 2: Sawtooth lead
-    0x08, 0xE0,  // AD, SR
-    0x02,        // Wavetable 2
-    0x00,        // No pulse table
-    0x00,        // No filter
-    0x00,        // No vibrato
-    0x02,        // Gate timer 2
+// Pulse table pointer (0 = none)
+const uint8_t test_instr_pulseptr[] = {
+    0x00,  // [0] Unused
+    0x01,  // [1] Use pulse table 1
+    0x00,  // [2] No pulse table
+    [3 ... 63] = 0x00
+};
 
-    // Rest are empty
-    [21 ... 255] = 0x00
+// Filter table pointer (0 = none)
+const uint8_t test_instr_filterptr[] = {
+    0x00,  // [0] Unused
+    0x00,  // [1] No filter
+    0x00,  // [2] No filter
+    [3 ... 63] = 0x00
+};
+
+// Wave table pointer
+const uint8_t test_instr_waveptr[] = {
+    0x00,  // [0] Unused
+    0x01,  // [1] Wave table 1
+    0x02,  // [2] Wave table 2
+    [3 ... 63] = 0x00
+};
+
+// Attack/Decay
+const uint8_t test_instr_ad[] = {
+    0x00,  // [0] Unused
+    0x09,  // [1] Fast attack
+    0x08,  // [2] Fast attack
+    [3 ... 63] = 0x00
+};
+
+// Sustain/Release
+const uint8_t test_instr_sr[] = {
+    0x00,  // [0] Unused
+    0xF0,  // [1] High sustain
+    0xE0,  // [2] High sustain
+    [3 ... 63] = 0x00
+};
+
+// Vibrato delay
+const uint8_t test_instr_vibdelay[] = {
+    0x00,  // [0] Unused
+    0x00,  // [1] No delay
+    0x00,  // [2] No delay
+    [3 ... 63] = 0x00
+};
+
+// Vibrato parameter
+const uint8_t test_instr_vibparam[] = {
+    0x00,  // [0] Unused
+    0x00,  // [1] No vibrato
+    0x00,  // [2] No vibrato
+    [3 ... 63] = 0x00
 };
 
 //=============================================================================
 // WAVETABLE DATA
 //=============================================================================
 
-const uint8_t test_wavetable_data[] = {
+const uint8_t test_wave_table[] = {
     // Table 0: Empty (end immediately)
     0x00,
 
-    // Table 1: Simple pulse wave hold
-    0x01,        // Delay 1 frame
+    // Table 1: Simple pulse wave hold (starts at index 1)
+    0x11,        // Delay 1 frame + waveform byte follows (0x10 + 1)
     0x41,        // Waveform: gate + pulse
-    0xFF,        // Loop to start
+    0xFF,        // Loop command
+    0x01,        // Loop to index 1
 
-    // Table 2: Sawtooth with vibrato
-    0x01,        // Delay 1 frame
+    // Table 2: Sawtooth (starts at index 5)
+    0x11,        // Delay 1 frame + waveform
     0x21,        // Waveform: gate + sawtooth
-    0xFF,        // Loop
+    0xFF,        // Loop command
+    0x05,        // Loop to index 5
+};
+
+// Note table (signed offsets for wavetable)
+const int8_t test_note_table[] = {
+    0x00,        // [0] No offset
+    0x00,        // [1] No offset
+    0x00,        // [2] No offset
+    0x00,        // [3] No offset
+    0x00,        // [4] No offset
+    0x00,        // [5] No offset
+    0x00,        // [6] No offset
+    0x00,        // [7] No offset
+    0x00,        // [8] No offset
 };
 
 //=============================================================================
 // PULSE TABLE DATA
 //=============================================================================
 
-const uint8_t test_pulsetable_data[] = {
+const uint8_t test_pulse_time_table[] = {
     // Table 0: Empty
     0x00,
 
-    // Table 1: Simple pulse sweep
-    0x00,        // Speed/delay
-    0x80, 0x00,  // Start pulse width (lo, hi)
-    0xFF,        // Set command
-    0x10, 0x00,  // Modulation amount
-    0x00,        // End
+    // Table 1: Simple pulse (starts at index 1)
+    0x80,        // Set pulse width (high bit = set)
+    0x01,        // Modulation step
+    0xFF,        // Loop command
+    0x01,        // Loop to index 1
+};
+
+const uint8_t test_pulse_speed_table[] = {
+    // Table 0: Empty
+    0x00,
+
+    // Table 1: Matches time table
+    0x80,        // Pulse width value
+    0x10,        // Modulation speed
+    0x00,        // Jump target (loop)
+    0x00,        // Unused
 };
 
 //=============================================================================
 // FILTER TABLE DATA
 //=============================================================================
 
-const uint8_t test_filtertable_data[] = {
-    // Global filter table: Simple hold
-    0x00,        // Speed
-    0x00, 0x00,  // Cutoff (lo, hi)
-    0x00,        // Control
-    0x00,        // End
+const uint8_t test_filter_time_table[] = {
+    // No filter table used
+    0x00,
+};
+
+const uint8_t test_filter_speed_table[] = {
+    // No filter table used
+    0x00,
+};
+
+//=============================================================================
+// EFFECT SPEED TABLES
+//=============================================================================
+
+const uint8_t test_speed_left_table[] = {
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+    [8 ... 255] = 0x00
+};
+
+const uint8_t test_speed_right_table[] = {
+    0x00, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70,
+    [8 ... 255] = 0x00
 };
 
 //=============================================================================
 // PATTERN DATA
 //=============================================================================
 
-// Pattern pointers (index into pattern_data)
-const uint16_t test_pattern_pointers[] = {
-    0,     // Pattern 0
-    32,    // Pattern 1
-    64,    // Pattern 2
-    96,    // Pattern 3
-    128,   // Pattern 4
-    160,   // Pattern 5
+// Pattern pointer tables (low and high bytes)
+// For simplicity, pattern data starts at offset 0 in test_pattern_data
+const uint8_t test_pattern_table_lo[] = {
+    0x00,   // Pattern 0 at offset 0
+    0x20,   // Pattern 1 at offset 32
+    0x40,   // Pattern 2 at offset 64
+    0x60,   // Pattern 3 at offset 96
+    0x80,   // Pattern 4 at offset 128
+    0xA0,   // Pattern 5 at offset 160
+};
+
+const uint8_t test_pattern_table_hi[] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
 const uint8_t test_pattern_data[] = {
@@ -300,11 +393,6 @@ const uint8_t* test_order_list_pointers[NUM_CHANNELS] = {
     test_order_list_2,
 };
 
-// Song names (optional, for debugging)
-const char* test_song_names[] = {
-    "Test Song 0",
-};
-
 //=============================================================================
 // MAIN MUSIC DATA STRUCTURE
 //=============================================================================
@@ -314,36 +402,39 @@ const MusicData test_music_data = {
     .freq_table_lo = test_freq_table_lo,
     .freq_table_hi = test_freq_table_hi,
 
-    // Instrument table
-    .instrument_table = test_instrument_table,
-
-    // Wavetable
-    .wavetable_lo = (const uint8_t*)((uintptr_t)test_wavetable_data & 0xFF),
-    .wavetable_hi = (const uint8_t*)((uintptr_t)test_wavetable_data >> 8),
-
-    // Pulse table
-    .pulsetable_lo = (const uint8_t*)((uintptr_t)test_pulsetable_data & 0xFF),
-    .pulsetable_hi = (const uint8_t*)((uintptr_t)test_pulsetable_data >> 8),
-
-    // Filter table
-    .filtertable_lo = (const uint8_t*)((uintptr_t)test_filtertable_data & 0xFF),
-    .filtertable_hi = (const uint8_t*)((uintptr_t)test_filtertable_data >> 8),
-
-    // Pattern data
-    .pattern_lo = (const uint8_t*)((uintptr_t)test_pattern_pointers & 0xFF),
-    .pattern_hi = (const uint8_t*)((uintptr_t)test_pattern_pointers >> 8),
-
     // Order lists
     .order_lists = test_order_list_pointers,
 
-    // Song names (optional)
-    .song_names = test_song_names,
+    // Pattern tables
+    .pattern_table_lo = test_pattern_table_lo,
+    .pattern_table_hi = test_pattern_table_hi,
 
-    // Initial tempo (funk tempo values)
-    .initial_tempo = {6, 6},  // Standard tempo (no funk)
+    // Instrument parameters (Structure of Arrays)
+    .instr_gatetimer = test_instr_gatetimer,
+    .instr_firstwave = test_instr_firstwave,
+    .instr_pulseptr = test_instr_pulseptr,
+    .instr_filterptr = test_instr_filterptr,
+    .instr_waveptr = test_instr_waveptr,
+    .instr_ad = test_instr_ad,
+    .instr_sr = test_instr_sr,
+    .instr_vibdelay = test_instr_vibdelay,
+    .instr_vibparam = test_instr_vibparam,
 
-    // Filter parameters
-    .filter_params = {0, 0, 0},  // No filter initially
+    // Wavetable
+    .wave_table = test_wave_table,
+    .note_table = test_note_table,
+
+    // Pulse table
+    .pulse_time_table = test_pulse_time_table,
+    .pulse_speed_table = test_pulse_speed_table,
+
+    // Filter table
+    .filter_time_table = test_filter_time_table,
+    .filter_speed_table = test_filter_speed_table,
+
+    // Effect speed tables
+    .speed_left_table = test_speed_left_table,
+    .speed_right_table = test_speed_right_table,
 };
 
 //=============================================================================
@@ -380,16 +471,16 @@ const PatternTestCase pattern0_tests[] = {
     {0, 6, 1, 0xFF, FX_VIBRATO, 0x46, "Vibrato (no note)"},
 
     // Rest
-    {0, 8, 1, NOTE_REST, 0, 0, "Rest"},
+    {0, 8, 1, PATTERN_REST, 0, 0, "Rest"},
 
     // KeyOff
-    {0, 9, 1, NOTE_KEYOFF, 0, 0, "KeyOff"},
+    {0, 9, 1, PATTERN_KEYOFF, 0, 0, "KeyOff"},
 
     // KeyOn
-    {0, 10, 1, NOTE_KEYON, 0, 0, "KeyOn"},
+    {0, 10, 1, PATTERN_KEYON, 0, 0, "KeyOn"},
 
     // Packed rest - this advances pattern_ptr by 4
-    {0, 11, 1, NOTE_REST, 0, 0, "Packed rest (4 frames)"},
+    {0, 11, 1, PATTERN_REST, 0, 0, "Packed rest (4 frames)"},
 };
 
 // Order list test expectations
