@@ -9,8 +9,8 @@
 // The registers are accessed as memory-mapped I/O at $D400-$D418.
 //=============================================================================
 
-#ifndef PLAYER3_SID_H
-#define PLAYER3_SID_H
+#ifndef PLAYER_SID_H
+#define PLAYER_SID_H
 
 #include <stdint.h>
 
@@ -271,4 +271,4 @@ static inline void sid_set_volume(uint8_t volume) {
     sid->filter_mode_volume = (sid->filter_mode_volume & 0xF0) | (volume & 0x0F);
 }
 
-#endif // PLAYER3_SID_H
+#endif // PLAYER_SID_H

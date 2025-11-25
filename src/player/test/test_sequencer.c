@@ -17,9 +17,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
-#include "../include/player3.h"
-#include "../include/player3_types.h"
-#include "../include/player3_internal.h"
+#include "../include/player.h"
+#include "../include/player_types.h"
+#include "../include/player_internal.h"
 
 // Include test data
 #include "test_data.h"
@@ -357,7 +357,7 @@ void test_sequencer_integration(void) {
 int main(void) {
     printf("\n");
     printf("================================================================================\n");
-    printf("PLAYER3 SEQUENCER UNIT TESTS\n");
+    printf("PLAYER SEQUENCER UNIT TESTS\n");
     printf("================================================================================\n");
     printf("Testing Phase 2 implementation: Order list and pattern parsing\n");
 

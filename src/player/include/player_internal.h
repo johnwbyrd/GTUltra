@@ -1,18 +1,18 @@
 //=============================================================================
-// PLAYER3_INTERNAL.H - Internal Functions for Testing and Debugging
+// PLAYER_INTERNAL.H - Internal Functions for Testing and Debugging
 //=============================================================================
 // This header exposes internal player functions that are not part of the
 // public API. These functions are used for:
 // - Unit testing individual components
 // - Debugging
 //
-// DO NOT include this header in normal application code. Use player3.h instead.
+// DO NOT include this header in normal application code. Use player.h instead.
 //=============================================================================
 
-#ifndef PLAYER3_INTERNAL_H
-#define PLAYER3_INTERNAL_H
+#ifndef PLAYER_INTERNAL_H
+#define PLAYER_INTERNAL_H
 
-#include "player3_types.h"
+#include "player_types.h"
 
 //=============================================================================
 // SEQUENCER FUNCTIONS
@@ -118,4 +118,4 @@ void execute_filtertable(Player* player, const MusicData* music);
  */
 void execute_soundfx(Channel* ch, const MusicData* music, uint8_t channel_num);
 
-#endif // PLAYER3_INTERNAL_H
+#endif // PLAYER_INTERNAL_H

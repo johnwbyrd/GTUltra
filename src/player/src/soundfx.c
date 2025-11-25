@@ -23,8 +23,8 @@
 // - On end: Return to normal music playback
 //=============================================================================
 
-#include "../include/player3.h"
-#include "../include/player3_types.h"
+#include "../include/player.h"
+#include "../include/player_types.h"
 #include "../include/sid.h"
 
 /**

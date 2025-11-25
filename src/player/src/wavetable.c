@@ -19,8 +19,8 @@
 // complex melodic patterns automatically.
 //=============================================================================
 
-#include "../include/player3.h"
-#include "../include/player3_types.h"
+#include "../include/player.h"
+#include "../include/player_types.h"
 
 /**
  * Execute wavetable for one frame.

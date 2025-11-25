@@ -24,8 +24,8 @@
 // - FX_VIBRATO (4): Oscillating pitch
 //=============================================================================
 
-#include "../include/player3.h"
-#include "../include/player3_types.h"
+#include "../include/player.h"
+#include "../include/player_types.h"
 #include "../include/sid.h"
 
 //=============================================================================
@@ -130,7 +130,7 @@ void execute_tick0_effect(Channel* ch, const MusicData* music) {
             // Set tempo
             if (param < 0x80) {
                 // Global tempo - set same tempo for all channels
-                // TODO: Access to all channels needed - implement in player3.c
+                // TODO: Access to all channels needed - implement in player.c
             } else {
                 // Per-channel tempo
                 ch->tempo = param & 0x7F;

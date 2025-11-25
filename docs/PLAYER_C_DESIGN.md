@@ -1,8 +1,8 @@
-# Player3 C Implementation Design Document
+# Player C Implementation Design Document
 
 ## Project Overview
 
-**Goal**: Rewrite player3.s (Commodore 64 SID music player) in idiomatic C for llvm-mos compiler, maintaining binary compatibility with existing .sng music files while prioritizing readability and maintainability.
+**Goal**: Rewrite player.s (Commodore 64 SID music player) in idiomatic C for llvm-mos compiler, maintaining binary compatibility with existing .sng music files while prioritizing readability and maintainability.
 
 **Constraints**:
 - Must play existing GoatTracker .sng files without modification
@@ -23,13 +23,13 @@
 ### Directory Layout
 
 ```
-src/player3/
+src/player/
 ├── include/
 │   ├── sid.h              // SID chip register definitions
-│   ├── player3_types.h    // Type definitions and constants
-│   └── player3.h          // Public API
+│   ├── player_types.h     // Type definitions and constants
+│   └── player.h           // Public API
 ├── src/
-│   ├── player3.c          // Main player loop and initialization
+│   ├── player.c           // Main player loop and initialization
 │   ├── sequencer.c        // Order list and pattern parsing
 │   ├── effects.c          // Effect handlers (all 16 effects)
 │   ├── wavetable.c        // Wavetable interpreter
@@ -51,17 +51,17 @@ src/player3/
 - SID register bit definitions
 - Inline accessor functions for SID writes
 
-#### `player3_types.h`
+#### `player_types.h`
 - All type definitions (Channel, Player, MusicData, etc.)
 - All constants and enums
 - No executable code
 
-#### `player3.h`
+#### `player.h`
 - Public API only
 - Player initialization and control
 - Opaque types (implementation hidden)
 
-#### `player3.c`
+#### `player.c`
 - Main player loop (`player_play`)
 - Initialization (`player_init`)
 - Channel execution orchestration
@@ -102,8 +102,8 @@ src/player3/
 ### SID Hardware (`sid.h`)
 
 ```c
-#ifndef PLAYER3_SID_H
-#define PLAYER3_SID_H
+#ifndef PLAYER_SID_H
+#define PLAYER_SID_H
 
 #include <stdint.h>
 
@@ -183,19 +183,19 @@ static inline void sid_write_adsr(uint8_t voice, uint8_t attack_decay, uint8_t s
     sid->voice[voice].sustain_release = sustain_release;
 }
 
-#endif // PLAYER3_SID_H
+#endif // PLAYER_SID_H
 ```
 
-### Core Types (`player3_types.h`)
+### Core Types (`player_types.h`)
 
 ```c
-#ifndef PLAYER3_TYPES_H
-#define PLAYER3_TYPES_H
+#ifndef PLAYER_TYPES_H
+#define PLAYER_TYPES_H
 
 #include <stdint.h>
 #include <stdbool.h>
 
-// Number of channels for player3 (1 SID = 3 voices)
+// Number of channels (1 SID = 3 voices)
 #define NUM_CHANNELS 3
 
 // Maximum number of songs in a multi-song file
@@ -431,17 +431,17 @@ typedef struct {
     uint8_t song_num;                // Current song number (for multi-song files)
 } Player;
 
-#endif // PLAYER3_TYPES_H
+#endif // PLAYER_TYPES_H
 ```
 
-### Public API (`player3.h`)
+### Public API (`player.h`)
 
 ```c
-#ifndef PLAYER3_H
-#define PLAYER3_H
+#ifndef PLAYER_H
+#define PLAYER_H
 
 #include <stdint.h>
-#include "player3_types.h"
+#include "player_types.h"
 
 //=============================================================================
 // PLAYER API
@@ -506,7 +506,7 @@ void player_play_sfx(Player* player, const MusicData* music,
  */
 void player_set_master_volume(Player* player, uint8_t volume);
 
-#endif // PLAYER3_H
+#endif // PLAYER_H
 ```
 
 ---
@@ -561,8 +561,8 @@ Each `.c` file should have:
 // and how it fits into the overall player architecture.
 //=============================================================================
 
-#include "player3.h"
-#include "player3_internal.h"
+#include "player.h"
+#include "player_internal.h"
 
 //-----------------------------------------------------------------------------
 // SECTION NAME
@@ -791,7 +791,7 @@ CFLAGS += -I include
 TARGET = c64
 
 # Source files
-SRCS = src/player3.c \
+SRCS = src/player.c \
        src/sequencer.c \
        src/effects.c \
        src/wavetable.c \
@@ -802,7 +802,7 @@ SRCS = src/player3.c \
 OBJS = $(SRCS:.c=.o)
 
 # Output
-TARGET_BIN = player3.lib
+TARGET_BIN = player.lib
 
 # Rules
 all: $(TARGET_BIN)
@@ -831,7 +831,7 @@ test: $(TARGET_BIN)
 ### Debug Build Features
 
 ```c
-// In player3_types.h
+// In player_types.h
 #ifdef PLAYER_DEBUG
     #define PLAYER_ASSERT(cond, msg) \
         do { if (!(cond)) { \
@@ -1010,7 +1010,7 @@ typedef struct {
 ### Expected Memory Usage
 
 **Code segment** (~4-6 KB):
-- player3.c: ~1.5 KB
+- player.c: ~1.5 KB
 - sequencer.c: ~1 KB
 - effects.c: ~1.5 KB
 - tables: ~1 KB
@@ -1031,7 +1031,7 @@ typedef struct {
 
 ## Next Steps
 
-1. **Create all header files** (sid.h, player3_types.h, player3.h)
+1. **Create all header files** (sid.h, player_types.h, player.h)
 2. **Create skeleton .c files** with function stubs
 3. **Set up build system** (Makefile, verify llvm-mos works)
 4. **Implement Phase 1** (foundation - get it compiling)
@@ -1042,8 +1042,8 @@ typedef struct {
 
 ## References
 
-- Original assembly: `src/player3.s`
-- Architecture analysis: `PLAYER3_ANALYSIS.md`
+- Original assembly: `src/player.s`
+- Architecture analysis: `PLAYER_ANALYSIS.md`
 - GoatTracker documentation: `README.md`, `goattrk2.txt`
 - SID chip documentation: Various online resources
 - llvm-mos documentation: https://llvm-mos.org/
@@ -1053,7 +1053,7 @@ typedef struct {
 ## Appendix: Example Usage
 
 ```c
-#include "player3.h"
+#include "player.h"
 
 // Music data (in ROM, generated by relocator)
 extern const MusicData my_song_data;

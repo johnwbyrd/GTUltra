@@ -1,5 +1,5 @@
 //=============================================================================
-// PLAYER3.C - Main Player Loop and Initialization
+// PLAYER.C - Main Player Loop and Initialization
 //=============================================================================
 // This file contains the core player logic:
 // - Initialization (player_init)
@@ -14,8 +14,8 @@
 // 4. Writes final values to SID registers
 //=============================================================================
 
-#include "../include/player3.h"
-#include "../include/player3_types.h"
+#include "../include/player.h"
+#include "../include/player_types.h"
 #include "../include/sid.h"
 
 //=============================================================================
@@ -145,7 +145,7 @@ static void complete_initialization(Player* player, const MusicData* music) {
     player->funk_tempo[1] = 5;
 
     // Initialize each channel with song-specific data
-    // For player3, we have 3 channels using 3 consecutive order lists
+    // We have NUM_CHANNELS channels using consecutive order lists
     uint8_t song_index = song_num * NUM_CHANNELS;  // Offset into order list table
 
     for (uint8_t i = 0; i < NUM_CHANNELS; i++) {
@@ -322,5 +322,5 @@ static void write_sid_registers(const Channel* ch, uint8_t channel_num) {
 }
 
 //=============================================================================
-// End of player3.c
+// End of player.c
 //=============================================================================

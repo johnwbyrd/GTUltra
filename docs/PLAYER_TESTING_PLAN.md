@@ -1,8 +1,8 @@
-# Player3 C Implementation - Testing Infrastructure Plan
+# Player C Implementation - Testing Infrastructure Plan
 
 ## Overview
 
-This document outlines the strategy for validating the Player3 C implementation against the reference assembly implementation (player3.s). The goal is bit-perfect compatibility: given the same song data, both implementations must produce identical SID register writes on every tick.
+This document outlines the strategy for validating the Player C implementation against the reference assembly implementation (player.s). The goal is bit-perfect compatibility: given the same song data, both implementations must produce identical SID register writes on every tick.
 
 ## Testing Strategy
 
@@ -29,7 +29,7 @@ This document outlines the strategy for validating the Player3 C implementation 
 **GitHub Actions Workflow Updates:**
 
 ```yaml
-# Add to .github/workflows/player3.yml
+# Add to .github/workflows/player.yml
 - name: Install VICE emulator
   run: |
     sudo apt-get update
@@ -52,7 +52,7 @@ This document outlines the strategy for validating the Player3 C implementation 
 **Components:**
 
 1. **Reference Test Binary (Assembly)**
-   - Location: `src/player3/test/ref_trace.s`
+   - Location: `src/player/test/ref_trace.s`
    - Built with existing assembler toolchain
    - Loads song data (embedded or from fixed location)
    - Calls `player_init` then loops calling `player_play`
@@ -74,8 +74,8 @@ This document outlines the strategy for validating the Player3 C implementation 
 **Components:**
 
 1. **C Test Binary**
-   - Location: `src/player3/test/c_trace.c`
-   - Built with llvm-mos, links against libplayer3.a
+   - Location: `src/player/test/c_trace.c`
+   - Built with llvm-mos, links against libplayer.a
    - Loads same song data as reference binary
    - Calls `player_init` and `player_play` in same loop structure
    - After each tick, copies $D400-$D418 (25 bytes) to output buffer
@@ -93,7 +93,7 @@ This document outlines the strategy for validating the Player3 C implementation 
 **Components:**
 
 1. **Test Runner Script**
-   - Location: `src/player3/test/run_comparison.sh`
+   - Location: `src/player/test/run_comparison.sh`
    - Runs reference binary in VICE, captures output
    - Runs C binary in VICE, captures output
    - Uses VICE command line options:
@@ -115,7 +115,7 @@ This document outlines the strategy for validating the Player3 C implementation 
 **Components:**
 
 1. **Trace Comparator**
-   - Location: `src/player3/test/compare_traces.sh` (simple diff)
+   - Location: `src/player/test/compare_traces.sh` (simple diff)
    - Reads reference trace and C trace files
    - Compares line-by-line (each line = one tick)
    - Reports first divergence with context:
@@ -145,7 +145,7 @@ Use real songs from `examples/` folder - they provide comprehensive coverage of 
 **Workflow:**
 
 ```yaml
-name: Player3 Reference Tests
+name: Player Reference Tests
 
 on: [push, pull_request]
 
@@ -162,31 +162,31 @@ jobs:
         # ... existing llvm-mos setup ...
 
       - name: Build reference harness
-        run: make -C src/player3 ref-trace
+        run: make -C src/player ref-trace
 
       - name: Build C harness
-        run: make -C src/player3 c-trace
+        run: make -C src/player c-trace
 
       - name: Generate reference traces
         run: |
-          for song in src/player3/test/*.sng; do
+          for song in src/player/test/*.sng; do
             x64sc -console -moncommands capture_trace.mon "$song"
           done
 
       - name: Generate C traces
         run: |
-          for song in src/player3/test/*.sng; do
+          for song in src/player/test/*.sng; do
             x64sc -console ./build/c_trace.prg "$song"
           done
 
       - name: Compare traces
-        run: ./src/player3/test/compare_traces.sh
+        run: ./src/player/test/compare_traces.sh
 ```
 
 ## File Structure
 
 ```
-src/player3/
+src/player/
 ├── test/
 │   ├── ref_trace.s          # Assembly reference harness
 │   ├── c_trace.c            # C implementation harness
@@ -221,16 +221,16 @@ examples/                    # Real test songs (already exist)
 
 1. **Update GitHub Actions workflow** to install VICE + xvfb
 
-2. **Create reference trace harness** (`src/player3/test/ref_trace.s`)
-   - Assembly program that runs player3.s and dumps SID state
+2. **Create reference trace harness** (`src/player/test/ref_trace.s`)
+   - Assembly program that runs player.s and dumps SID state
 
-3. **Create C trace harness** (`src/player3/test/c_trace.c`)
-   - C program that runs player3.c and dumps SID state
+3. **Create C trace harness** (`src/player/test/c_trace.c`)
+   - C program that runs player.c and dumps SID state
 
-4. **Create VICE runner script** (`src/player3/test/run_comparison.sh`)
+4. **Create VICE runner script** (`src/player/test/run_comparison.sh`)
    - Drives VICE to run both binaries and capture output
 
-5. **Create comparison script** (`src/player3/test/compare_traces.sh`)
+5. **Create comparison script** (`src/player/test/compare_traces.sh`)
    - Diffs traces and reports first divergence
 
 6. **Verify locally with `gh act`**

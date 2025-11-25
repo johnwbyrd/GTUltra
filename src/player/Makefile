@@ -1,7 +1,7 @@
 #==============================================================================
-# Makefile for Player3 C Implementation
+# Makefile for Player C Implementation
 #==============================================================================
-# This Makefile builds the player3 library for the Commodore 64 using the
+# This Makefile builds the player library for the Commodore 64 using the
 # llvm-mos compiler toolchain.
 #
 # USAGE:
@@ -51,7 +51,7 @@ TEST_DIR = test
 
 # Implementation files
 SRCS = \
-    $(SRC_DIR)/player3.c \
+    $(SRC_DIR)/player.c \
     $(SRC_DIR)/sequencer.c \
     $(SRC_DIR)/effects.c \
     $(SRC_DIR)/wavetable.c \
@@ -62,8 +62,8 @@ SRCS = \
 # Header files (for dependency tracking)
 HEADERS = \
     $(INC_DIR)/sid.h \
-    $(INC_DIR)/player3_types.h \
-    $(INC_DIR)/player3.h
+    $(INC_DIR)/player_types.h \
+    $(INC_DIR)/player.h
 
 # Object files
 OBJS = $(SRCS:$(SRC_DIR)/%.c=$(BUILD_DIR)/%.o)
@@ -77,7 +77,7 @@ TEST_BINS = $(TEST_SRCS:$(TEST_DIR)/%.c=$(BUILD_DIR)/%)
 #------------------------------------------------------------------------------
 
 # Library output
-LIB = $(BUILD_DIR)/libplayer3.a
+LIB = $(BUILD_DIR)/libplayer.a
 
 # Example programs
 EXAMPLE_DIR = examples
@@ -139,12 +139,12 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c $(HEADERS) | $(BUILD_DIR)
 # Build test executables
 $(BUILD_DIR)/%: $(TEST_DIR)/%.c $(LIB) | $(BUILD_DIR)
 	@echo "Building test: $@"
-	$(CC) $(CFLAGS) -o $@ $< -L$(BUILD_DIR) -lplayer3
+	$(CC) $(CFLAGS) -o $@ $< -L$(BUILD_DIR) -lplayer
 
 # Build example programs
 $(BUILD_DIR)/%.prg: $(EXAMPLE_DIR)/%.c $(LIB) | $(BUILD_DIR)
 	@echo "Building example: $@"
-	$(CC) $(CFLAGS) $(OPTFLAGS) -o $@ $< -L$(BUILD_DIR) -lplayer3
+	$(CC) $(CFLAGS) $(OPTFLAGS) -o $@ $< -L$(BUILD_DIR) -lplayer
 
 # Create build directory
 $(BUILD_DIR):
@@ -156,10 +156,10 @@ clean:
 
 # Help message
 help:
-	@echo "Player3 C Implementation - Makefile Help"
+	@echo "Player C Implementation - Makefile Help"
 	@echo ""
 	@echo "Targets:"
-	@echo "  make            - Build release library (libplayer3.a)"
+	@echo "  make            - Build release library (libplayer.a)"
 	@echo "  make debug      - Build debug library with assertions"
 	@echo "  make check      - Compile everything (CI-friendly)"
 	@echo "  make build-tests- Build test executables (compile only)"
@@ -192,23 +192,23 @@ $(OBJS): $(HEADERS)
 
 PREFIX ?= /usr/local
 INSTALL_LIB_DIR = $(PREFIX)/lib/mos-c64
-INSTALL_INC_DIR = $(PREFIX)/include/player3
+INSTALL_INC_DIR = $(PREFIX)/include/player
 
 .PHONY: install uninstall
 
 install: $(LIB)
-	@echo "Installing player3 library..."
+	@echo "Installing player library..."
 	mkdir -p $(INSTALL_LIB_DIR)
 	mkdir -p $(INSTALL_INC_DIR)
 	cp $(LIB) $(INSTALL_LIB_DIR)/
 	cp $(HEADERS) $(INSTALL_INC_DIR)/
 	@echo "Installation complete!"
-	@echo "  Library: $(INSTALL_LIB_DIR)/libplayer3.a"
+	@echo "  Library: $(INSTALL_LIB_DIR)/libplayer.a"
 	@echo "  Headers: $(INSTALL_INC_DIR)/"
 
 uninstall:
-	@echo "Uninstalling player3 library..."
-	rm -f $(INSTALL_LIB_DIR)/libplayer3.a
+	@echo "Uninstalling player library..."
+	rm -f $(INSTALL_LIB_DIR)/libplayer.a
 	rm -rf $(INSTALL_INC_DIR)
 	@echo "Uninstallation complete!"
 

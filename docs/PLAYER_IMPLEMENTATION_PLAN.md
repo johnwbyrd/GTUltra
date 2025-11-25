@@ -1,8 +1,8 @@
-# Player3 C Implementation Plan
+# Player C Implementation Plan
 
 ## Overview
 
-This document outlines the step-by-step implementation plan for rewriting player3.s in C. The plan is organized into 8 phases, each building on the previous one, with clear deliverables and test criteria.
+This document outlines the step-by-step implementation plan for rewriting player.s in C. The plan is organized into 8 phases, each building on the previous one, with clear deliverables and test criteria.
 
 ---
 
@@ -13,15 +13,15 @@ This document outlines the step-by-step implementation plan for rewriting player
 ### Tasks
 
 1. **Set up directory structure** ✓
-   - [x] Create `src/player3/` directory
-   - [x] Create `src/player3/include/` for headers
-   - [x] Create `src/player3/src/` for implementation
-   - [ ] Create `src/player3/test/` for tests
+   - [x] Create `src/player/` directory
+   - [x] Create `src/player/include/` for headers
+   - [x] Create `src/player/src/` for implementation
+   - [ ] Create `src/player/test/` for tests
 
 2. **Create header files** ✓
    - [x] `sid.h` - SID chip register definitions
-   - [x] `player3_types.h` - All type definitions
-   - [x] `player3.h` - Public API
+   - [x] `player_types.h` - All type definitions
+   - [x] `player.h` - Public API
 
 3. **Set up build system**
    - [ ] Create `Makefile` for llvm-mos
@@ -30,7 +30,7 @@ This document outlines the step-by-step implementation plan for rewriting player
    - [ ] Verify llvm-mos toolchain is accessible
 
 4. **Create skeleton implementation files**
-   - [ ] `player3.c` - Main player loop (stub functions)
+   - [ ] `player.c` - Main player loop (stub functions)
    - [ ] `sequencer.c` - Pattern/order list processing (stubs)
    - [ ] `effects.c` - Effect handlers (stubs)
    - [ ] `wavetable.c` - Wavetable interpreter (stub)
@@ -39,7 +39,7 @@ This document outlines the step-by-step implementation plan for rewriting player
    - [ ] `soundfx.c` - Sound effect player (stub)
 
 5. **Implement SID initialization**
-   - [ ] Define SID chip pointer in `player3.c`:
+   - [ ] Define SID chip pointer in `player.c`:
      ```c
      volatile SID_Chip* const sid = (SID_Chip*)SID_BASE_ADDRESS;
      ```
@@ -134,42 +134,42 @@ void test_simple_pattern(void) {
 
 ### Tasks
 
-1. **Implement tick counter** (`player3.c`)
+1. **Implement tick counter** (`player.c`)
    - [ ] Function: `update_tick_counter()`
      - Decrement counter
      - Reload from tempo when reaching zero
      - Handle funk tempo (alternating values)
 
-2. **Implement frequency lookup** (`player3.c`)
+2. **Implement frequency lookup** (`player.c`)
    - [ ] Function: `get_note_frequency()`
      - Look up frequency from tables
      - Return 16-bit frequency value
 
-3. **Implement SID register writing** (`player3.c`)
+3. **Implement SID register writing** (`player.c`)
    - [ ] Function: `write_sid_registers()`
      - Write frequency (low and high bytes)
      - Write pulse width
      - Write waveform with gate
      - Write ADSR envelope
 
-4. **Implement basic gate control** (`player3.c`)
+4. **Implement basic gate control** (`player.c`)
    - [ ] Handle gate on (new note starts)
    - [ ] Handle gate off (note releases)
    - [ ] Implement gate timer from instrument
 
-5. **Implement player_init()** (`player3.c`)
+5. **Implement player_init()** (`player.c`)
    - [ ] Initialize all channels to zero
    - [ ] Set default tempo
    - [ ] Load initial waveforms
    - [ ] Reset SID filter
 
-6. **Implement player_play() skeleton** (`player3.c`)
+6. **Implement player_play() skeleton** (`player.c`)
    - [ ] Complete pending initialization
    - [ ] Loop over 3 channels
    - [ ] Call execute_channel() for each
    - [ ] Write final SID values
 
-7. **Implement execute_channel() basic** (`player3.c`)
+7. **Implement execute_channel() basic** (`player.c`)
    - [ ] Update tick counter
    - [ ] Fetch new note on tick 0
    - [ ] Load note frequency
@@ -252,7 +252,7 @@ void test_simple_melody(void) {
      - Calculated speed mode (note-relative)
      - Support for both modes
 
-6. **Add effect support to execute_channel()** (`player3.c`)
+6. **Add effect support to execute_channel()** (`player.c`)
    - [ ] Call tick 0 effects when appropriate
    - [ ] Call continuous effects every tick
    - [ ] Apply effect results to frequency
@@ -332,7 +332,7 @@ void test_vibrato(void) {
      - Apply modulation to cutoff
      - Handle loop command
 
-4. **Add table execution to player loop** (`player3.c`)
+4. **Add table execution to player loop** (`player.c`)
    - [ ] Call wavetable executor for each channel
    - [ ] Call pulse table executor for each channel
    - [ ] Call filter table executor (global, once per frame)
@@ -394,7 +394,7 @@ void test_wavetable_simple(void) {
      - Frame 2+: Read notes and waveforms
      - End detection ($00 byte)
 
-3. **Add SFX override to player loop** (`player3.c`)
+3. **Add SFX override to player loop** (`player.c`)
    - [ ] Check if SFX active before normal processing
    - [ ] Call SFX executor if active
    - [ ] Resume normal music when SFX ends
@@ -609,7 +609,7 @@ The implementation is complete when:
 
 **Completed**:
 - [x] Directory structure created
-- [x] Header files created (sid.h, player3_types.h, player3.h)
+- [x] Header files created (sid.h, player_types.h, player.h)
 - [x] Design document written
 
 **Next Steps**:

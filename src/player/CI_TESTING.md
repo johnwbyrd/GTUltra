@@ -45,26 +45,26 @@ sudo mv act /usr/local/bin/
 **Test the full workflow:**
 ```bash
 cd /path/to/GTUltra
-act -W .github/workflows/player3-ci.yml
+act -W .github/workflows/player-ci.yml
 ```
 
 **Test a specific job:**
 ```bash
 # Test only the build-and-test job
-act -W .github/workflows/player3-ci.yml -j build-and-test
+act -W .github/workflows/player-ci.yml -j build-and-test
 
 # Test only the code-quality job
-act -W .github/workflows/player3-ci.yml -j code-quality
+act -W .github/workflows/player-ci.yml -j code-quality
 ```
 
 **Dry run (list jobs without executing):**
 ```bash
-act -W .github/workflows/player3-ci.yml -l
+act -W .github/workflows/player-ci.yml -l
 ```
 
 **Verbose output for debugging:**
 ```bash
-act -W .github/workflows/player3-ci.yml -v
+act -W .github/workflows/player-ci.yml -v
 ```
 
 ### Expected Output
@@ -114,14 +114,14 @@ sudo usermod -aG docker $USER
 **Issue: Act uses too much disk space**
 **Solution:** Use a smaller Docker image:
 ```bash
-act -W .github/workflows/player3-ci.yml -P ubuntu-latest=catthehacker/ubuntu:act-latest
+act -W .github/workflows/player-ci.yml -P ubuntu-latest=catthehacker/ubuntu:act-latest
 ```
 
 ### Workflow File Location
 
 The CI workflow is defined in:
 ```
-.github/workflows/player3-ci.yml
+.github/workflows/player-ci.yml
 ```
 
 ### What the CI Tests
@@ -130,7 +130,7 @@ The workflow performs the following checks:
 
 1. **Build validation:**
    - Compiles all source files
-   - Creates `libplayer3.a` library
+   - Creates `libplayer.a` library
    - Builds test executables
 
 2. **Code quality:**
@@ -159,7 +159,7 @@ export PATH="/opt/llvm-mos/bin:$PATH"
 mos-c64-clang --version
 
 # Build and test
-cd src/player3
+cd src/player
 make clean
 make check
 ```
@@ -171,11 +171,11 @@ The workflow runs automatically on:
 - **Push events:**
   - To `main` or `master` branches
   - To any `claude/**` branches
-  - Only when files in `src/player3/` change
+  - Only when files in `src/player/` change
 
 - **Pull request events:**
   - Targeting `main` or `master` branches
-  - Only when files in `src/player3/` change
+  - Only when files in `src/player/` change
 
 ### Viewing CI Results on GitHub
 
@@ -183,7 +183,7 @@ After pushing, view the CI results:
 
 1. Go to the repository on GitHub
 2. Click the "Actions" tab
-3. Select the "Player3 C Implementation CI" workflow
+3. Select the "Player C Implementation CI" workflow
 4. View logs, artifacts, and summaries
 
 ### Debugging Failed Builds
@@ -196,12 +196,12 @@ If the CI fails:
 
 2. **Test locally with act:**
    ```bash
-   act -W .github/workflows/player3-ci.yml -v
+   act -W .github/workflows/player-ci.yml -v
    ```
 
 3. **Test manually:**
    ```bash
-   cd src/player3
+   cd src/player
    make clean
    make check
    ```
@@ -217,10 +217,10 @@ If the CI fails:
 **Speed up act runs:**
 ```bash
 # Use cached Docker images
-act -W .github/workflows/player3-ci.yml --pull=false
+act -W .github/workflows/player-ci.yml --pull=false
 
 # Reuse previous containers
-act -W .github/workflows/player3-ci.yml --reuse
+act -W .github/workflows/player-ci.yml --reuse
 ```
 
 **Speed up GitHub Actions:**
@@ -232,15 +232,15 @@ act -W .github/workflows/player3-ci.yml --reuse
 
 ### Recommended workflow:
 
-1. **Make changes** to player3 source files
+1. **Make changes** to player source files
 2. **Test locally:**
    ```bash
-   cd src/player3
+   cd src/player
    make check
    ```
 3. **Test with act (optional):**
    ```bash
-   act -W .github/workflows/player3-ci.yml -j build-and-test
+   act -W .github/workflows/player-ci.yml -j build-and-test
    ```
 4. **Commit and push:**
    ```bash
@@ -256,8 +256,8 @@ Create `.git/hooks/pre-commit` to run checks automatically:
 
 ```bash
 #!/bin/bash
-echo "Running Player3 build check..."
-cd src/player3
+echo "Running Player build check..."
+cd src/player
 if make check; then
     echo "✓ Build check passed!"
 else
@@ -276,7 +276,7 @@ chmod +x .git/hooks/pre-commit
 - [nektos/act GitHub Repository](https://github.com/nektos/act)
 - [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [LLVM-MOS SDK Documentation](https://llvm-mos.org/wiki/)
-- [Player3 Implementation Plan](docs/PLAYER3_IMPLEMENTATION_PLAN.md)
+- [Player Implementation Plan](docs/PLAYER_IMPLEMENTATION_PLAN.md)
 
 ---
 

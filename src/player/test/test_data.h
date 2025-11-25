@@ -1,5 +1,5 @@
 //=============================================================================
-// TEST_DATA.C - Test Data for Player3 Sequencer Validation
+// TEST_DATA.H - Test Data for Player Sequencer Validation
 //=============================================================================
 // This file contains test data to validate the sequencer implementation.
 // It includes test patterns with all encoding formats and order lists
@@ -9,8 +9,8 @@
 //   Include this file in test programs to get access to test_music_data
 //=============================================================================
 
-#include "../include/player3.h"
-#include "../include/player3_types.h"
+#include "../include/player.h"
+#include "../include/player_types.h"
 
 //=============================================================================
 // FREQUENCY TABLES

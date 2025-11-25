@@ -16,8 +16,8 @@
 // changing the duty cycle of the pulse waveform over time.
 //=============================================================================
 
-#include "../include/player3.h"
-#include "../include/player3_types.h"
+#include "../include/player.h"
+#include "../include/player_types.h"
 
 /**
  * Execute pulse table for one frame.

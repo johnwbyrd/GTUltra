@@ -1,8 +1,8 @@
 //=============================================================================
-// PLAYER3_TYPES.H - Type Definitions for Player3
+// PLAYER_TYPES.H - Type Definitions for Player
 //=============================================================================
 // This file contains all the type definitions, constants, and enums used
-// by the player3 music player. It defines the data structures for:
+// by the player music player. It defines the data structures for:
 //
 // - Music data format (patterns, instruments, tables)
 // - Runtime player state (channels, effects, timing)
@@ -14,8 +14,8 @@
 // errors.
 //=============================================================================
 
-#ifndef PLAYER3_TYPES_H
-#define PLAYER3_TYPES_H
+#ifndef PLAYER_TYPES_H
+#define PLAYER_TYPES_H
 
 #include <stdint.h>
 #include <stddef.h>  // for NULL
@@ -26,7 +26,7 @@
 // CONFIGURATION CONSTANTS
 //-----------------------------------------------------------------------------
 
-// Number of channels for player3 (1 SID chip = 3 voices)
+// Number of channels (1 SID chip = 3 voices, can be 3, 6, 9, or 12)
 #define NUM_CHANNELS 3
 
 // Maximum number of songs in a multi-song file
@@ -218,7 +218,7 @@ typedef struct {
     // Order Lists (Song Structure)
     //-------------------------------------------------------------------------
     // Defines which patterns play in what order for each channel
-    // For player3: 3 order lists (one per channel)
+    // For 3-channel player: 3 order lists (one per channel)
     const uint8_t* const* order_lists;  // Array of 3 pointers to order lists
 
     //-------------------------------------------------------------------------
@@ -452,4 +452,4 @@ typedef struct {
     uint8_t song_num;        // Current song number (for multi-song files, 0-based)
 } Player;
 
-#endif // PLAYER3_TYPES_H
+#endif // PLAYER_TYPES_H

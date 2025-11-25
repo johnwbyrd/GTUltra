@@ -1,7 +1,7 @@
-# Player3.s Architecture Analysis
+# Player.s Architecture Analysis
 
 ## Overview
-Player3.s is a 1-SID (3-channel) music player for the Commodore 64. It plays pattern-based music with effects, supporting wavetables, pulse modulation, filters, and sound effects.
+Player.s is a 1-SID (3-channel) music player for the Commodore 64. It plays pattern-based music with effects, supporting wavetables, pulse modulation, filters, and sound effects.
 
 ---
 

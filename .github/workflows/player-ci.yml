@@ -1,20 +1,20 @@
-name: Player3 C Implementation CI
+name: Player C Implementation CI
 
 on:
   push:
     branches: [ main, master, 'claude/**' ]
     paths:
-      - 'src/player3/**'
-      - '.github/workflows/player3-ci.yml'
+      - 'src/player/**'
+      - '.github/workflows/player-ci.yml'
   pull_request:
     branches: [ main, master ]
     paths:
-      - 'src/player3/**'
-      - '.github/workflows/player3-ci.yml'
+      - 'src/player/**'
+      - '.github/workflows/player-ci.yml'
 
 jobs:
   build-and-test:
-    name: Build and Test Player3
+    name: Build and Test Player
     runs-on: ubuntu-latest
 
     steps:
@@ -53,22 +53,22 @@ jobs:
           which mos-c64-clang || (echo "ERROR: mos-c64-clang not found in PATH" && exit 1)
           mos-c64-clang --version
 
-      - name: Build Player3 library
-        working-directory: src/player3
+      - name: Build Player library
+        working-directory: src/player
         run: |
-          echo "Building Player3 library..."
+          echo "Building Player library..."
           make all
           echo "✓ Library built successfully"
 
       - name: Build tests
-        working-directory: src/player3
+        working-directory: src/player
         run: |
           echo "Building tests..."
           make build-tests
           echo "✓ Tests compiled successfully"
 
       - name: Run syntax and compilation check
-        working-directory: src/player3
+        working-directory: src/player
         run: |
           echo "Running comprehensive compilation check..."
           make clean
@@ -78,23 +78,23 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: player3-build
+          name: player-build
           path: |
-            src/player3/build/libplayer3.a
-            src/player3/build/*.o
-            src/player3/build/test_*
+            src/player/build/libplayer.a
+            src/player/build/*.o
+            src/player/build/test_*
           retention-days: 7
 
       - name: Build summary
         run: |
           echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✓ Player3 C implementation built successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "✓ Player C implementation built successfully!" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "- Library: \`libplayer3.a\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Object files: $(ls src/player3/build/*.o | wc -l) files" >> $GITHUB_STEP_SUMMARY
-          echo "- Test binaries: $(ls src/player3/build/test_* 2>/dev/null | wc -l) files" >> $GITHUB_STEP_SUMMARY
+          echo "- Library: \`libplayer.a\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Object files: $(ls src/player/build/*.o | wc -l) files" >> $GITHUB_STEP_SUMMARY
+          echo "- Test binaries: $(ls src/player/build/test_* 2>/dev/null | wc -l) files" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Compiler" >> $GITHUB_STEP_SUMMARY
           echo "- LLVM-MOS SDK v22.3.2" >> $GITHUB_STEP_SUMMARY
@@ -109,7 +109,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check for common issues
-        working-directory: src/player3
+        working-directory: src/player
         run: |
           echo "Checking for common code issues..."
 
@@ -137,7 +137,7 @@ jobs:
           echo "Code quality checks complete!"
 
       - name: Generate statistics
-        working-directory: src/player3
+        working-directory: src/player
         run: |
           echo "## Code Statistics" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
