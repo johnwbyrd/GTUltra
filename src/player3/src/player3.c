@@ -59,6 +59,8 @@ static void init_channel(Channel* ch, const MusicData* music, uint8_t song_index
  * transitions between songs during playback.
  */
 void player_init(Player* player, const MusicData* music, uint8_t song_num) {
+    (void)music;  // Unused - music data accessed later in player_play()
+
     // Store the song number as a negative value to trigger initialization
     // in player_play(). Using negative values allows us to encode the song
     // number (0-31) while still having a clear "needs init" flag.
