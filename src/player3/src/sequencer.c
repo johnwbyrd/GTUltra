@@ -43,15 +43,6 @@ static inline const uint8_t* read_pattern_pointer(const MusicData* music, uint8_
 }
 
 /**
- * Read a 16-bit order list pointer.
- *
- * Order lists are stored as an array of pointers.
- */
-static inline const uint8_t* read_order_list(const MusicData* music, uint8_t song_index) {
-    return music->order_lists[song_index];
-}
-
-/**
  * Get note frequency from frequency table.
  *
  * Combines low and high bytes from the frequency tables.
