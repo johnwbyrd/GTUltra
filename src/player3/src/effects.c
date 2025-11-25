@@ -40,6 +40,8 @@
  * how the note will sound.
  */
 void execute_tick0_effect(Channel* ch, const MusicData* music) {
+    (void)music;  // Unused for now - will be needed for speed table lookups
+
     uint8_t effect = ch->new_effect;
     uint8_t param = ch->new_param;
 
@@ -153,6 +155,8 @@ void execute_tick0_effect(Channel* ch, const MusicData* music) {
  * smooth pitch changes like vibrato or portamento.
  */
 void execute_continuous_effect(Channel* ch, const MusicData* music) {
+    (void)music;  // Unused for now - will be needed for speed table lookups
+
     // Continuous effects only run on ticks > 0
     // (Tick 0 is reserved for fetching new notes)
     if (ch->tick_counter == 0) {
@@ -160,7 +164,6 @@ void execute_continuous_effect(Channel* ch, const MusicData* music) {
     }
 
     uint8_t effect = ch->effect;
-    uint8_t param = ch->effect_param;
 
     // Dispatch to appropriate handler
     switch (effect) {
@@ -193,28 +196,6 @@ void execute_continuous_effect(Channel* ch, const MusicData* music) {
             // No continuous effect - do nothing
             break;
     }
-}
-
-//=============================================================================
-// HELPER FUNCTIONS
-//=============================================================================
-
-/**
- * Calculate effect speed from speed tables.
- *
- * The player supports two speed modes:
- * 1. Normal speed: Direct values from speed tables
- * 2. Calculated speed: Note-relative speeds (for smooth glissando)
- *
- * This function will be implemented when we add the portamento/vibrato effects.
- */
-static uint16_t calculate_effect_speed(const Channel* ch, const MusicData* music, uint8_t param) {
-    // TODO: Implement speed calculation
-    // For now, return a dummy value
-    (void)ch;
-    (void)music;
-    (void)param;
-    return 0;
 }
 
 //=============================================================================

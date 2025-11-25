@@ -35,6 +35,8 @@
  */
 void player_play_sfx(Player* player, const MusicData* music,
                      uint8_t channel, const uint8_t* sfx_data) {
+    (void)music;  // Unused - frequency table accessed via execute_soundfx
+
     Channel* ch = &player->channels[channel];
 
     // Priority check - only play if address is higher

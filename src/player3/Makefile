@@ -24,7 +24,7 @@
 CC = mos-c64-clang
 
 # Archiver (for creating .a library files)
-AR = mos-c64-ar
+AR = llvm-ar
 
 # Compiler flags
 CFLAGS = -std=c11 -Wall -Wextra -Werror
