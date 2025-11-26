@@ -2,15 +2,7 @@ name: Player C Implementation CI
 
 on:
   push:
-    branches: [ main, master, 'claude/**' ]
-    paths:
-      - 'src/player/**'
-      - '.github/workflows/player-ci.yml'
   pull_request:
-    branches: [ main, master ]
-    paths:
-      - 'src/player/**'
-      - '.github/workflows/player-ci.yml'
 
 jobs:
   build-and-test:
