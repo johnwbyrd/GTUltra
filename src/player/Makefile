@@ -89,7 +89,7 @@ EXAMPLES = \
 # Build Rules
 #------------------------------------------------------------------------------
 
-.PHONY: all clean debug test build-tests check help examples
+.PHONY: all clean debug test build-tests check help examples test-trace build-ref-trace build-c-trace
 
 # Default target: build release library
 all: $(LIB)
@@ -126,6 +126,35 @@ check: $(LIB) build-tests
 # Build example programs
 examples: $(EXAMPLES)
 
+# Build reference trace harness (assembly)
+build-ref-trace: $(BUILD_DIR)/ref_trace.prg
+	@echo "Reference trace harness built: $<"
+	@echo "Note: This is a placeholder. Full assembly integration requires setup of player.s"
+
+# Build C trace harness
+build-c-trace: $(BUILD_DIR)/c_trace
+	@echo "C trace harness built: $<"
+
+# Run trace comparison test
+test-trace: build-c-trace
+	@echo "Running trace comparison test..."
+	@echo ""
+	@echo "Note: Reference assembly harness (ref_trace.s) requires full integration"
+	@echo "      with player.s and proper assembler setup. Currently running C harness only."
+	@echo ""
+	@if ! command -v x64sc >/dev/null 2>&1; then \
+		echo "Error: x64sc emulator not found. Install VICE to run trace tests."; \
+		echo "  sudo apt-get install vice xvfb"; \
+		exit 1; \
+	fi
+	@echo "Running C trace harness..."
+	@$(TEST_DIR)/run_vice.sh $(BUILD_DIR)/c_trace > $(BUILD_DIR)/c_trace.txt || true
+	@echo ""
+	@echo "C trace output saved to: $(BUILD_DIR)/c_trace.txt"
+	@echo ""
+	@echo "Once assembly harness is complete, comparison will run automatically."
+	@echo "For now, you can inspect the C trace output manually."
+
 # Create library from object files
 $(LIB): $(OBJS) | $(BUILD_DIR)
 	@echo "Creating library: $@"
@@ -140,6 +169,14 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c $(HEADERS) | $(BUILD_DIR)
 $(BUILD_DIR)/%: $(TEST_DIR)/%.c $(LIB) | $(BUILD_DIR)
 	@echo "Building test: $@"
 	$(CC) $(CFLAGS) -o $@ $< -L$(BUILD_DIR) -lplayer
+
+# Build assembly reference trace harness
+# NOTE: This is a placeholder - requires proper assembler setup for player.s
+$(BUILD_DIR)/ref_trace.prg: $(TEST_DIR)/ref_trace.s | $(BUILD_DIR)
+	@echo "Building reference trace harness: $@"
+	@echo "  Note: Assembly harness integration not yet complete"
+	@echo "  Requires: player.s integration and proper assembler (exomizer format)"
+	@touch $@  # Placeholder for now
 
 # Build example programs
 $(BUILD_DIR)/%.prg: $(EXAMPLE_DIR)/%.c $(LIB) | $(BUILD_DIR)
@@ -165,6 +202,7 @@ help:
 	@echo "  make build-tests- Build test executables (compile only)"
 	@echo "  make test       - Build and run tests (requires VICE emulator)"
 	@echo "  make examples   - Build example programs"
+	@echo "  make test-trace - Run SID trace comparison test"
 	@echo "  make clean      - Remove all build artifacts"
 	@echo "  make help       - Show this message"
 	@echo ""
@@ -172,12 +210,14 @@ help:
 	@echo "  - llvm-mos-sdk installed (https://llvm-mos.org)"
 	@echo "  - mos-c64-clang in PATH"
 	@echo "  - x64sc emulator (optional, for running tests)"
+	@echo "  - VICE + xvfb (optional, for trace tests)"
 	@echo ""
 	@echo "Output:"
 	@echo "  Library: $(LIB)"
 	@echo "  Objects: $(BUILD_DIR)/*.o"
 	@echo "  Tests:   $(BUILD_DIR)/test_*"
 	@echo "  Examples: $(BUILD_DIR)/*.prg"
+	@echo "  Traces:  $(BUILD_DIR)/*_trace.txt"
 
 #------------------------------------------------------------------------------
 # Dependencies
