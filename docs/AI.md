@@ -154,6 +154,21 @@ GTUltra/
 
 ## Common Mistakes to Avoid
 
+### 0. ❌ CRITICAL: NEVER RUN TOOLS DIRECTLY ON THIS MACHINE
+**Problem:** Tools like `x64sc`, `make`, `mos-c64-clang`, etc. are NOT installed locally
+**Solution:** ALL execution MUST go through GitHub Actions via `gh act`
+**The ONLY way to run ANYTHING is:**
+```bash
+gh act -j <job-name> -W .github/workflows/<workflow>.yml
+```
+**NEVER attempt to run:**
+- `x64sc` or any VICE commands
+- `make` or build commands
+- `mos-c64-clang` or compiler commands
+- Any other project-specific tools
+
+If you need to test something, create or modify a CI workflow and run it with `gh act`.
+
 ### 1. ❌ Trying to run `make` directly
 **Problem:** llvm-mos-sdk is not installed locally
 **Solution:** Use `gh act -j build-and-test`
@@ -320,9 +335,28 @@ cat src/player/include/player.h
 
 ---
 
+## Documentation Standards
+
+**All engineering documents must be:**
+- Objective and factual
+- Free of hype, marketing language, and editorialization
+- Accurate about what works vs. what doesn't
+
+**Do not:**
+- Claim something is "complete" when it has missing functionality
+- Use superlatives ("excellent", "comprehensive", "robust")
+- Add cheerful summaries or spin
+
+**Do:**
+- State what is implemented
+- State what is not implemented
+- List known bugs and limitations
+
+---
+
 ## Updates
 
-**Last Updated:** 2025-11-25
+**Last Updated:** 2025-11-26
 
 **When to update this file:**
 - When discovering new critical information
@@ -330,7 +364,3 @@ cat src/player/include/player.h
 - When build process changes
 - When common mistakes are identified
 - **When you catch yourself asking the same question twice**
-
----
-
-**Remember:** When in doubt, read the documentation first. It's faster than guessing!

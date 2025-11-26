@@ -1,106 +1,49 @@
 #!/bin/bash
 #===============================================================================
-# VICE Runner Script
+# VICE Runner Script - runs C64 program and dumps memory via remote monitor
 #===============================================================================
-# Runs a C64 .prg file in VICE emulator and captures output
-#
-# Usage: ./run_vice.sh <program.prg> [timeout_seconds]
-#
-# This script:
-# - Runs the program in x64sc (cycle-accurate C64 emulator)
-# - Uses headless mode with xvfb (virtual framebuffer)
-# - Disables sound
-# - Runs in warp mode (maximum speed)
-# - Captures console/screen output
-# - Times out after specified seconds (default: 10)
-#===============================================================================
+set -e
 
-set -e  # Exit on error
+PRG_FILE="$(realpath "$1")"
+OUTPUT_FILE="$(realpath -m "$2")"
 
-# Check arguments
-if [ $# -lt 1 ]; then
-    echo "Usage: $0 <program.prg> [timeout_seconds]"
-    exit 1
-fi
+[ -f "$PRG_FILE" ] || { echo "Error: $PRG_FILE not found"; exit 1; }
+command -v x64sc &>/dev/null || { echo "Error: x64sc not found"; exit 1; }
 
-PRG_FILE="$1"
-TIMEOUT="${2:-10}"  # Default 10 seconds
+cd "$(mktemp -d)"
+trap 'rm -rf "$(pwd)"' EXIT
 
-# Check if file exists
-if [ ! -f "$PRG_FILE" ]; then
-    echo "Error: File not found: $PRG_FILE"
-    exit 1
-fi
-
-# Check if VICE is installed
-if ! command -v x64sc &> /dev/null; then
-    echo "Error: x64sc (VICE emulator) not found"
-    echo "Install with: sudo apt-get install vice"
-    exit 1
-fi
-
-# Check if xvfb is available (for headless mode)
-if ! command -v xvfb-run &> /dev/null; then
-    echo "Warning: xvfb-run not found, running without virtual framebuffer"
-    XVFB_CMD=""
-else
-    XVFB_CMD="xvfb-run -a"
-fi
-
-# Temporary file for VICE monitor commands
-MONITOR_CMD=$(mktemp)
-trap "rm -f $MONITOR_CMD" EXIT
-
-# Create VICE monitor script
-# This will:
-# 1. Load the program
-# 2. Run it
-# 3. Wait for completion or timeout
-# 4. Exit
-
-cat > "$MONITOR_CMD" << 'EOF'
-# Load program
-load "$PRG_FILE" 0
-
-# Set breakpoint at end (placeholder - program should halt naturally)
-# break $FFFF
-
-# Run
-goto $0801
-
-# VICE will run until program halts or we hit timeout
-EOF
-
-# Run VICE in console mode
-# Options:
-#   -console: Use console interface
-#   -sounddev dummy: No sound output
-#   -warp: Run as fast as possible (no frame limiting)
-#   -limitcycles: Stop after N cycles (optional)
-#   -moncommands: Execute monitor commands from file
+XVFB=""
+command -v xvfb-run &>/dev/null && XVFB="xvfb-run -a"
 
 echo "Running $PRG_FILE in VICE..."
-echo "Timeout: ${TIMEOUT}s"
 
-# Run with timeout
-# Note: VICE console mode may not capture all output cleanly
-# For production, we may need to use VICE's logging features
-timeout "$TIMEOUT" $XVFB_CMD x64sc \
-    -console \
-    -sounddev dummy \
-    -warp \
-    -autostartprgmode 1 \
-    "$PRG_FILE" \
-    2>&1 || {
-    EXIT_CODE=$?
-    if [ $EXIT_CODE -eq 124 ]; then
-        echo "Warning: VICE timed out after ${TIMEOUT}s"
-        # Timeout is not necessarily an error - program may have run successfully
-        exit 0
-    else
-        echo "Error: VICE exited with code $EXIT_CODE"
-        exit $EXIT_CODE
-    fi
-}
+# Use remote monitor on port 6510 - we can connect via netcat
+MONITOR_PORT=6510
 
-echo "VICE execution completed"
+# Start VICE in background with remote monitor enabled
+$XVFB x64sc -sounddev dummy -warp -autostartprgmode 1 \
+    -remotemonitor -remotemonitoraddress 127.0.0.1:$MONITOR_PORT \
+    "$PRG_FILE" >/dev/null 2>&1 &
+VICE_PID=$!
+
+# Wait for VICE to start and program to run (BRK will stop execution)
+sleep 4
+
+# Connect to remote monitor and send commands
+{
+    echo 'save "trace.bin" 0 3ff0 44e1'
+    sleep 0.5
+    echo 'quit'
+} | nc -q 1 127.0.0.1 $MONITOR_PORT 2>/dev/null || true
+
+# Wait for VICE to exit
+wait $VICE_PID 2>/dev/null || true
+
+if [ -f "trace.bin" ]; then
+    cp trace.bin "$OUTPUT_FILE"
+    echo "Trace saved: $OUTPUT_FILE ($(wc -c < "$OUTPUT_FILE") bytes)"
+else
+    echo "Error: trace.bin not created"
+    exit 1
+fi

@@ -1,186 +1,181 @@
-# Player C Implementation - Testing Infrastructure Plan
+# Player C Implementation - Testing Infrastructure
 
 ## Overview
 
-This document outlines the strategy for validating the Player C implementation against the reference assembly implementation (player.s). The goal is bit-perfect compatibility: given the same song data, both implementations must produce identical SID register writes on every tick.
+This document describes how to validate the Player C implementation against the reference assembly player. The goal is bit-perfect compatibility: given the same song data, both implementations must produce identical SID register writes.
 
-## Testing Strategy
+## The Problem: SID Registers Are Write-Only
 
-### Core Concept
+SID registers at $D400-$D418 are **write-only**. Reading them from the CPU returns undefined values (typically zeros in VICE). This means:
 
-1. Load identical song data in both implementations
-2. Run tick-by-tick in lockstep
-3. After each tick, capture complete SID state (all 25 registers: $D400-$D418)
-4. Compare traces - any divergence indicates a bug
+- We cannot read SID state from memory after `player_play()` returns
+- Shadow registers in C code only capture what the C player writes, not what the assembly player writes
+- Memory dumps of $D400-$D418 are useless
 
-**Note:** We only compare final SID register state per tick, not internal player variables. The internal state may differ between implementations as long as the SID output is identical.
+## The Solution: VICE `-sounddev dump`
 
-### Why This Matters
+VICE can log **every SID register write** to a file using the `-sounddev dump` option. This captures the actual writes as they happen, with cycle-accurate timing.
 
-- SID music is what the user hears - that's what must match
-- Effects like portamento/vibrato modify frequency every tick
-- Even small errors compound and become audible
-- Real songs from examples/ folder provide comprehensive coverage
+### Dump File Format
 
-## Implementation Plan
+The dump file is **space-separated text**:
 
-### Phase 1: CI Infrastructure - Install VICE Emulator
+```
+<clock_offset> <reg> <val>
+```
 
-**GitHub Actions Workflow Updates:**
+Where:
+- `clock_offset`: CPU cycles since the previous write (cumulative sum gives absolute cycle)
+- `reg`: SID register number (0-24, corresponding to $D400-$D418)
+- `val`: Value written (0-255)
+
+Example:
+```
+0 24 15
+100 0 72
+5 1 28
+12 4 33
+```
+
+This means:
+- At cycle 0: write 15 to register 24 (volume = 15)
+- At cycle 100: write 72 to register 0 (voice 1 freq_lo)
+- At cycle 105: write 28 to register 1 (voice 1 freq_hi)
+- At cycle 117: write 33 to register 4 (voice 1 control)
+
+### Why This Works
+
+1. **Captures actual writes** - not shadow registers, not memory reads
+2. **Works for any player** - assembly or C, no code instrumentation needed
+3. **Cycle-accurate timing** - can detect timing differences between implementations
+4. **Per-write granularity** - see exact order of writes within a frame
+
+## Implementation
+
+### Running VICE with Sound Dump
+
+```bash
+xvfb-run -a x64sc \
+    -sounddev dump \
+    -soundarg sid_writes.log \
+    -warp \
+    -autostartprgmode 1 \
+    -limitcycles 5000000 \
+    program.prg
+```
+
+Options:
+- `-sounddev dump`: Enable SID write logging
+- `-soundarg sid_writes.log`: Output file path
+- `-warp`: Maximum speed (no frame sync)
+- `-autostartprgmode 1`: Auto-run the .prg file
+- `-limitcycles 5000000`: Stop after ~5M cycles (~5 seconds of emulation)
+
+### Test Harness Programs
+
+Both assembly and C test harnesses are simple:
+
+1. Initialize player with test song data
+2. Call `player_play()` N times (e.g., 50 ticks)
+3. Halt (BRK instruction)
+
+VICE captures all SID writes automatically - no need to copy registers to memory.
+
+**C Test Harness (`src/player/test/c_trace.c`):**
+```c
+int main(void) {
+    static Player player;
+    player_init(&player, &test_music_data, 0);
+
+    for (uint8_t tick = 0; tick < 50; tick++) {
+        player_play(&player, &test_music_data);
+    }
+
+    // Halt - VICE has already logged all SID writes
+    for (;;) {
+        __asm__ volatile ("brk");
+    }
+}
+```
+
+### Trace Comparison
+
+#### Option A: Per-Frame Comparison
+
+Convert cycle-accurate writes to per-frame snapshots:
+- PAL frame = 19656 cycles
+- Group writes by frame, take final value of each register
+- Output: 25-byte state at end of each frame
+
+Pros: Simpler comparison, smaller output
+Cons: Loses intra-frame timing information
+
+#### Option B: Per-Write Comparison
+
+Compare raw write sequences directly:
+- Same writes in same order = pass
+- Different write = fail, report first difference
+
+Pros: Catches timing bugs, exact comparison
+Cons: More complex, larger output
+
+**Recommendation:** Start with Option A (per-frame). If needed, add Option B for debugging.
+
+### Parsing the Dump File
+
+Simple bash/awk script to convert to per-frame format:
+
+```bash
+#!/bin/bash
+# Parse VICE -sounddev dump output to per-frame SID state
+
+CYCLES_PER_FRAME=19656  # PAL
+declare -a regs
+for i in {0..24}; do regs[$i]=0; done
+
+frame=0
+clock=0
+
+while read offset reg val; do
+    clock=$((clock + offset))
+    frame_num=$((clock / CYCLES_PER_FRAME))
+
+    # New frame? Output previous state
+    while [ $frame -lt $frame_num ]; do
+        printf "FRAME:%04X" $frame
+        for i in {0..24}; do
+            printf " D4%02X:%02X" $i ${regs[$i]}
+        done
+        echo
+        ((frame++))
+    done
+
+    regs[$reg]=$val
+done < "$1"
+```
+
+## CI Integration
+
+### GitHub Actions Workflow
 
 ```yaml
-# Add to .github/workflows/player.yml
 - name: Install VICE emulator
   run: |
     sudo apt-get update
-    sudo apt-get install -y vice xvfb
-```
+    sudo apt-get install -y --no-install-recommends vice xvfb unrar-free
+    # Download and install VICE ROMs
+    curl -L -o /tmp/vice-roms.rar "https://..."
+    cd /tmp && unrar x -o+ vice-roms.rar
+    sudo cp -r /tmp/VICE_ROMs/data/* /usr/share/vice/
 
-**Headless Execution:**
-- Use `xvfb-run` to provide virtual framebuffer (VICE needs X even in "headless" mode)
-- Use `x64sc` (cycle-accurate C64 emulator) for accurate SID timing
-- Example: `xvfb-run x64sc -console -sounddev dummy ...`
+- name: Run C player trace
+  run: |
+    xvfb-run -a x64sc -sounddev dump -soundarg c_trace.log \
+        -warp -autostartprgmode 1 -limitcycles 5000000 \
+        build/c_trace.prg
 
-**Local Testing with gh act:**
-- Same setup in Docker container
-- VICE + xvfb installed in container
-
-### Phase 2: Reference Trace Generator (Assembly Binary)
-
-**Purpose:** Build a .prg that runs the assembly player and outputs SID state
-
-**Components:**
-
-1. **Reference Test Binary (Assembly)**
-   - Location: `src/player/test/ref_trace.s`
-   - Built with existing assembler toolchain
-   - Loads song data (embedded or from fixed location)
-   - Calls `player_init` then loops calling `player_play`
-   - After each tick, copies $D400-$D418 (25 bytes) to output buffer
-   - After N ticks, outputs trace data (to screen, serial, or file)
-   - Output format: simple hex dump, one line per tick
-
-2. **Trace Format**
-   ```
-   TICK:0000 D400:xx D401:xx D402:xx ... D418:xx
-   TICK:0001 D400:xx D401:xx D402:xx ... D418:xx
-   ...
-   ```
-
-### Phase 3: C Implementation Trace Generator (C Binary)
-
-**Purpose:** Build a .prg that runs the C player and outputs SID state
-
-**Components:**
-
-1. **C Test Binary**
-   - Location: `src/player/test/c_trace.c`
-   - Built with llvm-mos, links against libplayer.a
-   - Loads same song data as reference binary
-   - Calls `player_init` and `player_play` in same loop structure
-   - After each tick, copies $D400-$D418 (25 bytes) to output buffer
-   - Outputs trace in identical format to reference
-   - Same tick count as reference
-
-2. **Output Method**
-   - Both binaries output to screen (VICE can capture screen output)
-   - Or: write to a fixed memory region, then use VICE monitor to dump
-
-### Phase 4: VICE Harness Script
-
-**Purpose:** Drive VICE to run both binaries and capture output
-
-**Components:**
-
-1. **Test Runner Script**
-   - Location: `src/player/test/run_comparison.sh`
-   - Runs reference binary in VICE, captures output
-   - Runs C binary in VICE, captures output
-   - Uses VICE command line options:
-     - `-console` for text mode
-     - `-sounddev dummy` to disable audio
-     - `-warp` for maximum speed
-     - `-limitcycles N` to run for exactly N cycles then exit
-     - Or use monitor commands to control execution
-
-2. **Trace Extraction**
-   - Option A: Binary writes trace to screen, capture VICE output
-   - Option B: Binary writes to memory, use VICE `-moncommands` to dump after run
-   - Option C: Use VICE's built-in logging/tracing features
-
-### Phase 5: Comparison Tool
-
-**Purpose:** Diff the traces and report mismatches
-
-**Components:**
-
-1. **Trace Comparator**
-   - Location: `src/player/test/compare_traces.sh` (simple diff)
-   - Reads reference trace and C trace files
-   - Compares line-by-line (each line = one tick)
-   - Reports first divergence with context:
-     - Which tick number
-     - Which register(s) differ
-     - Expected vs actual values
-   - Exit code 0 = match, 1 = mismatch
-
-### Phase 6: Test Suite
-
-**Test Songs:**
-
-Use real songs from `examples/` folder - they provide comprehensive coverage of all features without needing synthetic test cases:
-- `examples/Jammer/*.sng`
-- `examples/JasonPage/*.sng`
-- `examples/Linus/*.sng`
-- `examples/LMan/*.sng`
-- `examples/Mibri/*.sng`
-- `examples/Shogoon/*.sng`
-
-**Test Parameters:**
-- Run each song for 1000-3000 ticks (20-60 seconds at 50Hz)
-- This covers initialization, note changes, effects, table execution
-
-### Phase 7: CI Integration
-
-**Workflow:**
-
-```yaml
-name: Player Reference Tests
-
-on: [push, pull_request]
-
-jobs:
-  reference-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install VICE
-        run: sudo apt-get install -y vice
-
-      - name: Install LLVM-MOS
-        # ... existing llvm-mos setup ...
-
-      - name: Build reference harness
-        run: make -C src/player ref-trace
-
-      - name: Build C harness
-        run: make -C src/player c-trace
-
-      - name: Generate reference traces
-        run: |
-          for song in src/player/test/*.sng; do
-            x64sc -console -moncommands capture_trace.mon "$song"
-          done
-
-      - name: Generate C traces
-        run: |
-          for song in src/player/test/*.sng; do
-            x64sc -console ./build/c_trace.prg "$song"
-          done
-
-      - name: Compare traces
-        run: ./src/player/test/compare_traces.sh
+- name: Convert trace to text
+  run: ./test/dump_to_frames.sh c_trace.log > c_trace.txt
 ```
 
 ## File Structure
@@ -188,58 +183,30 @@ jobs:
 ```
 src/player/
 ├── test/
-│   ├── ref_trace.s          # Assembly reference harness
-│   ├── c_trace.c            # C implementation harness
-│   ├── run_comparison.sh    # Main test runner script
-│   ├── capture_trace.mon    # VICE monitor script
-│   ├── compare_traces.sh    # Comparison script
-│   └── traces/              # Generated trace files (gitignored)
-│       ├── ref/
-│       └── c/
-
-examples/                    # Real test songs (already exist)
-├── Jammer/*.sng
-├── JasonPage/*.sng
-├── Linus/*.sng
-├── LMan/*.sng
-├── Mibri/*.sng
-└── Shogoon/*.sng
+│   ├── c_trace.c           # C test harness (just runs player)
+│   ├── test_data.h         # Minimal test song data
+│   ├── run_vice.sh         # Runs VICE with -sounddev dump
+│   ├── dump_to_frames.sh   # Converts dump to per-frame format
+│   └── compare_traces.sh   # Diffs two trace files
 ```
 
-## Open Questions
+## Current Status
 
-1. **VICE headless mode:** Need to verify `x64sc -console` works in GitHub Actions Ubuntu runner with xvfb.
+- CI infrastructure working (VICE + ROMs installed)
+- C test harness compiles and runs
+- Need to switch from memory dump to `-sounddev dump`
+- Need to write dump parser script
+- Assembly reference harness not yet implemented
 
-2. **Song loading mechanism:** How do we load .sng files into the test binaries? Options:
-   - Embed song data at compile time
-   - Load from disk at runtime (VICE supports file I/O)
-   - Use VICE monitor to inject data into memory
+## Next Steps
 
-3. **Tick count per song:** Need to balance coverage vs CI time. 1000-3000 ticks per song seems reasonable.
+1. Update `run_vice.sh` to use `-sounddev dump` instead of remote monitor
+2. Write `dump_to_frames.sh` to parse the dump format
+3. Simplify `c_trace.c` (remove capture_sid_state, just run player)
+4. Create assembly reference harness
+5. Implement trace comparison
 
-## Implementation Actions
+## References
 
-1. **Update GitHub Actions workflow** to install VICE + xvfb
-
-2. **Create reference trace harness** (`src/player/test/ref_trace.s`)
-   - Assembly program that runs player.s and dumps SID state
-
-3. **Create C trace harness** (`src/player/test/c_trace.c`)
-   - C program that runs player.c and dumps SID state
-
-4. **Create VICE runner script** (`src/player/test/run_comparison.sh`)
-   - Drives VICE to run both binaries and capture output
-
-5. **Create comparison script** (`src/player/test/compare_traces.sh`)
-   - Diffs traces and reports first divergence
-
-6. **Verify locally with `gh act`**
-
-7. **Integrate into CI pipeline**
-
-## Success Criteria
-
-- All test songs produce identical traces between assembly and C implementations
-- CI runs in < 5 minutes
-- Clear error messages when traces diverge
-- Easy to add new test cases
+- [VICE Manual - Sound Options](https://vice-emu.sourceforge.io/vice_2.html)
+- [desidulate](https://github.com/anarkiwi/desidulate) - Python tools for parsing VICE SID dumps

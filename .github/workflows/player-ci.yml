@@ -69,6 +69,7 @@ jobs:
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
+        if: env.ACT != 'true'
         with:
           name: player-build
           path: |
@@ -125,8 +126,14 @@ jobs:
         run: |
           echo "Installing VICE emulator..."
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends vice xvfb
-          echo "✓ VICE installed successfully"
+          sudo apt-get install -y --no-install-recommends vice xvfb unrar-free xxd netcat-openbsd
+          echo "Downloading VICE ROMs..."
+          curl -L -o /tmp/vice-roms.rar \
+            "https://rr.pokefinder.org/rrwiki/images/8/8a/VICE_ROMs_all_rr.pokefinder.org_2024-10.rar"
+          cd /tmp && unrar x -o+ vice-roms.rar || true
+          sudo cp -r /tmp/VICE_ROMs/data/* /usr/share/vice/
+          echo "VICE ROMs installed"
+          ls /usr/share/vice/C64/*.bin | head -5
 
       - name: Build Player library
         working-directory: src/player
@@ -143,7 +150,7 @@ jobs:
 
       - name: Upload trace artifacts
         uses: actions/upload-artifact@v4
-        if: always()
+        if: env.ACT != 'true'
         with:
           name: trace-outputs
           path: |

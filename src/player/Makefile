@@ -138,22 +138,21 @@ build-c-trace: $(BUILD_DIR)/c_trace
 # Run trace comparison test
 test-trace: build-c-trace
 	@echo "Running trace comparison test..."
-	@echo ""
-	@echo "Note: Reference assembly harness (ref_trace.s) requires full integration"
-	@echo "      with player.s and proper assembler setup. Currently running C harness only."
-	@echo ""
 	@if ! command -v x64sc >/dev/null 2>&1; then \
 		echo "Error: x64sc emulator not found. Install VICE to run trace tests."; \
 		echo "  sudo apt-get install vice xvfb"; \
 		exit 1; \
 	fi
-	@echo "Running C trace harness..."
-	@$(TEST_DIR)/run_vice.sh $(BUILD_DIR)/c_trace > $(BUILD_DIR)/c_trace.txt || true
+	@echo "Running C trace harness in VICE..."
+	@$(TEST_DIR)/run_vice.sh $(BUILD_DIR)/c_trace $(BUILD_DIR)/c_trace.bin 5000000
+	@echo "Converting binary trace to text..."
+	@$(TEST_DIR)/trace_to_text.sh $(BUILD_DIR)/c_trace.bin $(BUILD_DIR)/c_trace.txt
 	@echo ""
 	@echo "C trace output saved to: $(BUILD_DIR)/c_trace.txt"
-	@echo ""
-	@echo "Once assembly harness is complete, comparison will run automatically."
-	@echo "For now, you can inspect the C trace output manually."
+	@if [ -f $(BUILD_DIR)/c_trace.txt ]; then \
+		echo "First 5 lines:"; \
+		head -5 $(BUILD_DIR)/c_trace.txt; \
+	fi
 
 # Create library from object files
 $(LIB): $(OBJS) | $(BUILD_DIR)
